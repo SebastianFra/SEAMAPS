@@ -20,3 +20,16 @@ All_Carbon_price = Array{Int64}(Data_scenarios[L1_scenario:end , C_carbon_price]
 All_carbon_multiplier = Array{Float64}(Data_scenarios[L1_scenario:end , C_carbon_multiplier])
 All_results_folder_names = Array{String}(Data_scenarios[L1_scenario:end , C_results_folder])
 #All_Input_data = Array{String}(Data_scenarios[L1_scenario:end , C_input_data])
+
+
+#Data Description for SEAMAPS and Soft-Linkage
+#dimension:
+#General
+#  time:
+#    scope: 2020 to 2100
+#    resolution: annual data
+#    description: We optimize with perfect foresight along the entire modelling time-frame
+#  space:
+#    scope: global
+#    resolution: global
+#    description: We model the maritime industry on a global level

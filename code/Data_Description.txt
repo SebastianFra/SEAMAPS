@@ -1,0 +1,64 @@
+
+Data Description for SEAMAPS and Soft-Linkage
+
+DIMENSION:
+time:
+    scope: 2020 to 2100
+    resolution: annual data
+    description: We optimize with perfect foresight along the entire modelling time-frame
+space:
+    scope: global
+    resolution: global
+    description: We model the maritime industry on a global level
+ship_type: 
+	scope:	global
+	resolution:	Container, General Cargo, Bulk, Tanker, Others
+	description: We use average ships for the above ship-types
+engines technologies:
+	scope:	global
+	resolution: ME-C, ME-GI, ME-LGIm, ME-LGIa,ME-LGImulti, ME-GImulti
+	description: Fuels handled without additional retrofitting cost
+	Engine type	First year available	Available Fuels
+	ME-C		2020					VLSFO/HFOsc	MDO/MGO
+	ME-GI		2020					VLSFO/HFOsc	MDO/MGO LNG/LBG
+	ME-LGIm		2020					VLSFO/HFOsc	MDO/MGO	MeOH
+	ME-LGIa		2025					VLSFO/HFOsc	MDO/MGO NH3
+	ME-LGImulti	2031					VLSFO/HFOsc	MDO/MGO	MeOH NH3
+	ME-GImulti	2031					VLSFO/HFOsc	MDO/MGO LNG/LBG MeOH NH3
+fuel technologies:
+	scope: global	
+	resolution:VLSFO/HFOsc MDO MGO LNG MeOH-grey MeOH-ebio MeOH-PS	MeOH-DAC NH3-grey NH3-blue NH3-green LBG
+	description: 
+		Fuel_name			Category			Production Method
+		VVLSFO/HFOsc	Very Low Sulphur Fuel Oil /Heavy fuel oil	Fossil Fuel	Conventional
+		MDO	Marine Diesel Oil	Fossil Fuel	Conventional
+		MGO	Marine Gas Oil	Fossil Fuel	Conventional
+		LNG	Liquified Natural Gas	Fossil Fuel	Conventional
+		MeOH-grey	Methanol	Fossil Fuel	Conventional using Natural Gas
+		MeOH-ebio	Bio-e-Methanol	Green Fuel	Biomass-to-Methanol via thermochemical conversion boosted with electrolytic hydrogen 
+		MeOH-PS		E-Methanol	Green Fuel	CO2 hydrogenation using hydrogen from electrolysis and renewable CO2 (according to IRENA terminology) from Point-Source from biomass-fired plant
+		MeOH-DAC	E-Methanol	Green Fuel	CO2 hydrogenation using hydrogen from electrolysis and renewable CO2 (according to IRENA terminology from Direct Air Capture
+		NH3-grey	Grey Ammonia	Fossil Fuel	Conventional using Natural Gas
+		NH3-blue		Blue Ammonia	Blue Fuel 	Haber–Bosch process using Natural Gas (steam-methane reformation) & Carbon Capture Storage
+		NH3-green	Green Ammonia	Green Fuel	Haber–Bosch process using hydrogen from electrolysis
+		LBG	Liquified Biogas (bio-methane)	Green Fuel	Anaerobic digestion of biomass subsequently upgraded to biomethane and liquified
+
+MEASURES:
+Fuel emissions WTT: 
+	unit: [ktCO2eq/PJ]
+	description: Well-To-Tank fuel emissions upstream emissions
+Fuel emissions TWW: 
+	unit: [ktCO2eq/PJ]
+	description: Tank-to-Wake  fuel emissions
+Fuel cost:
+	unit:[M€2019/PJ]
+	description: fuel costs for each respective fuel on a annual basis
+Biomass Availabiltiy
+	unit: [PJ]
+	description: Availability of sustainable biomass potential for biofuels
+	Gap: Here we use averages of sustainable biomass only (Crop Residues, Forestry residues, Black liquor). We could use the MESSAGEix availbility of biomass
+Comepting Demand:
+	unit: [PJ]
+	description: demand for biomass from other industries here: aviation, petro-chemical, biomass for electricity, On-Road-Freight
+	Gap: Here we use averages from different reports for the respective industries and also only cover a few industries. In this case we should use MESSAGEix to have a more holistic approach to this topic.
+	

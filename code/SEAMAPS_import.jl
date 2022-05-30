@@ -22,10 +22,9 @@ Data_fuel_emissions_WTT_infra =
     readxlsheet(Datafile, "i_Fuel_emissions_WTT_" * Power_supply)
 Data_fuel_emissions_WTT =
     readxlsheet(Datafile, "Fuel_emissions_WTT_" * Power_supply)
-Data_Gap_fuel_emissions_WTT =
-    readxlsheet(Datafile, "Gap_Fuel_emissions_WTT_" * Power_supply)
 Data_fuel_emissions_TTW = readxlsheet(Datafile, "Fuel_emissions_TTW")
-Data_Gap_fuel_emissions_TTW = readxlsheet(Datafile, "Gap_Fuel_emissions_TTW")
+Data_ConveH2toFuel= readxlsheet(Datafile, "ConveH2toFuel")
+Data_ConveCCStoFuel= readxlsheet(Datafile, "ConveCCStoFuel")
 Data_fuel_cost = readxlsheet(Datafile, "Fuel_cost_" * Power_supply)
 Data_availabity = readxlsheet(Datafile, "Availability_" * Biomass_av)
 Data_biomass_availabity = readxlsheet(Datafile, "Shared_biomass_available")
@@ -68,6 +67,8 @@ Data_up_ramping_factor_total = readxlsheet(Datafile, "ramping_up_factor_total")
 
 
 Conversion_1 = Data_Conversion_1[2:end, 2:end]
+ConveH2toFuel=Data_ConveH2toFuel[2:end, 2:end]
+ConveCCStoFuel=Data_ConveCCStoFuel[2:end, 2:end]
 Conversion_2 = Data_Conversion_2[2:end, 2:end]
 CO2_price = Data_CO2_price[2:end, 2:end]
 Fuel_savings = Data_Fuel_savings[2:end, 2:end]
@@ -85,6 +86,9 @@ DACMeOH = findfirst(x -> x == "MET-DAC", Data_fuel_cost[2:end, 1])
 NH3_blue = findfirst(x -> x == "AMM-blue", Data_fuel_cost[2:end, 1])
 LBG = findfirst(x -> x == "LBG", Data_fuel_cost[2:end, 1])
 
+eH2based = [NH3_green BioMeOH PSMeOH DACMeOH]  ; nH2based = length(eH2based)
+CCSbased = [NH3_blue]  ; nCCSbasedd = length(CCSbased)
+
 if Set == "Infra"
     fuel_emissions_WTT = Data_fuel_emissions_WTT_infra[2:end, 2:end]
 elseif Set != "Infra"
@@ -96,8 +100,6 @@ elseif Set != "GWP20"
     fuel_emissions_TTW = Data_fuel_emissions_TTW[2:end, 2:end]
 end
 fuel_emissions_WTT = fuel_emissions_WTT
-Gap_fuel_emissions_WTT = Data_Gap_fuel_emissions_WTT[2:end, 2:end]
-Gap_fuel_emissions_TTW = Data_Gap_fuel_emissions_TTW[2:end, 2:end]
 fuel_available = Data_availabity[2:end, 2:end]
 
 

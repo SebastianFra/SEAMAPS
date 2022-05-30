@@ -42,14 +42,14 @@ library(ggpattern)
 First_Plot = "CO2-tax-Progressive"
 Second_Plot = "CO2-tax-Flat"
 
-input_folder = "C:/Users/semfr/Documents/Market-based measures paper/SEAMAPS_Working Edition/SEAMAPS/data"
-output_folder_1 = "C:/Users/semfr/Documents/Market-based measures paper/SEAMAPS_Working Edition/SEAMAPS/data/Results_Infra_CO2_tax_Realistic_WTW_2035"
-input_data_1 = "C:/Users/semfr/Documents/Market-based measures paper/Code/data/Input_data_ROADMAP.xls"
+input_folder = "C:/Users/semfr/Documents/SEAMAPS/data"
+output_folder_1 = "C:/Users/semfr/Documents/SEAMAPS/data/Results_Infra_CO2_tax_Realistic_WTW_Conventional"
+input_data_1 = "C:/Users/semfr/Documents/SEAMAPS/data/Input_data_SEAMAPS_Baseline.xls"
 
-output_folder_2 = "C:/Users/semfr/Documents/Market-based measures paper/SEAMAPS_Working Edition/SEAMAPS/data/Results_Infra_CO2_tax_Realistic_WTW_2035"
-
-output_folder_3 = "C:/Users/semfr/Documents/Market-based measures paper/SEAMAPS_Working Edition/SEAMAPS/data/Results_Infra_CO2_tax_flat_Realistic_WTW_2040"
-input_data_2 = "C:/Users/semfr/Documents/Market-based measures paper/Code/data/Input_data_ROADMAP.xls"
+output_folder_2 = "C:/Users/semfr/Documents/SEAMAPS/data/Results_Infra_CO2_tax_Realistic_WTW_Unconventional"
+#Data_folder for main plots
+output_folder_3 = "C:/Users/semfr/Documents/SEAMAPS/data/Results_Infra_CO2_tax_Realistic_WTW_Conventional"
+input_data_2 = "C:/Users/semfr/Documents/SEAMAPS/data/Input_data_SEAMAPS_Baseline.xls"
 ```
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
@@ -513,7 +513,7 @@ Scenario_database <-
       fuels == "NH3-green" |
       fuels == "LBG"
   )
-Scenario_database <- Scenario_database[, c(1, 2, 4, 5)]
+Scenario_database <- Scenario_database[, c(1, 2, 5)]
 Scenario_database <-
   melt(Scenario_database,
        id.vars = c("Year", "fuels"),
@@ -525,7 +525,7 @@ Scenario_database_plot <-
     fill = fuels,
     width = .75
   )) +
-  geom_area(
+  geom_bar(
     alpha = 0.9,
     position = position_stack(reverse = TRUE),
     stat = "identity",
@@ -534,10 +534,10 @@ Scenario_database_plot <-
   ggtitle("") +
   xlab("") +
   ylab("Fuel Mix in PJ") +
-theme_calc()+
+theme_bw()+
   facet_wrap( ~ Carbon_Pricing_Scheme) +
-    scale_color_viridis(discrete = TRUE, option = "V") +
-  scale_fill_viridis(discrete = TRUE)+
+    #scale_color_viridis(discrete = TRUE, option = "V") +
+  #scale_fill_viridis(discrete = TRUE)+
   theme(panel.spacing.x = unit(4, "mm")) +
   theme(axis.title = element_text(size = 10)) +
   guides(fill = guide_legend(title = "Fuels"))+
@@ -551,7 +551,7 @@ Scenario_Emissions_database <-
   Scenario_Emissions_database %>% filter(Scenario == "MBMD_WTW_99")
 Scenario_Emissions_database <-
   Scenario_Emissions_database %>% filter(emissions == "WTW")
-Scenario_Emissions_database <- Scenario_Emissions_database[, c(1, 4, 5)]
+Scenario_Emissions_database <- Scenario_Emissions_database[, c(1, 4)]
 IPCC_narratives = fread(
   file.path(input_folder, "/IPCC_narratives.csv"),
   sep = ",",
@@ -622,8 +622,6 @@ Scenario_Emissions_database <-
 Scenario_Emissions_database <-
   setDF(Scenario_Emissions_database) %>% group_by(Scenarios)
 Scenario_Emissions_database = summarise(Scenario_Emissions_database, value = sum(value))
-Scenario_Emissions_database$Scenarios <-
-  relevel(Scenario_Emissions_database$Scenarios, "CO2-tax-Flat")
 Scenario_Emissions_database_plot2 <-
   ggplot(Scenario_Emissions_database,
          aes(x = Scenarios, y = value, fill = Scenarios)) +
@@ -4126,8 +4124,8 @@ WTW_Comparison_Database_adj_1.5<- WTW_Comparison_Database_adj %>%
 WTW_Comparison_Database_adj_1.5 <- WTW_Comparison_Database_adj_1.5[,c(1,6)]
 WTW_Comparison_Database_adj_2 <- WTW_Comparison_Database_adj_2[,c(1,7)]
 WTW_Comparison_Database_adj3_1<- merge(WTW_Comparison_Database_adj_2,WTW_Comparison_Database_adj_1.5, by = c("carbon_price"),all.x = TRUE)
-setnames(WTW_Comparison_Database_adj3_1, old = "value_1.5", new = "Baseline_1.5°C")
-setnames(WTW_Comparison_Database_adj3_1, old = "value_2", new = "Baseline_well below 2°C")
+setnames(WTW_Comparison_Database_adj3_1, old = "value_1.5", new = "Conventional_1.5°C")
+setnames(WTW_Comparison_Database_adj3_1, old = "value_2", new = "Conventional_well below 2°C")
 
 
 ##
@@ -4164,14 +4162,14 @@ WTW_Comparison_Database_adj_1.5<- WTW_Comparison_Database_adj %>%
 WTW_Comparison_Database_adj_1.5 <- WTW_Comparison_Database_adj_1.5[,c(1,6)]
 WTW_Comparison_Database_adj_2 <- WTW_Comparison_Database_adj_2[,c(1,7)]
 WTW_Comparison_Database_adj3_2<- merge(WTW_Comparison_Database_adj_2,WTW_Comparison_Database_adj_1.5, by = c("carbon_price"),all.x = TRUE)
-setnames(WTW_Comparison_Database_adj3_2, old = "value_1.5", new = "Optimistic_1.5°C")
-setnames(WTW_Comparison_Database_adj3_2, old = "value_2", new = "Optimistic_well below 2°C")
+setnames(WTW_Comparison_Database_adj3_2, old = "value_1.5", new = "Unconventional_1.5°C")
+setnames(WTW_Comparison_Database_adj3_2, old = "value_2", new = "Unconventional_well below 2°C")
 #combine
 WTW_Comparison_Database_adj3<- merge(WTW_Comparison_Database_adj3_2,WTW_Comparison_Database_adj3_1, by = c("carbon_price"),all.x = TRUE)
 WTW_Comparison_Database_adj3=melt(WTW_Comparison_Database_adj3,id.vars = c("carbon_price"))
 setnames(WTW_Comparison_Database_adj3, old = "variable", new = "Paris_Agreement_Targets")
-setDT(WTW_Comparison_Database_adj3)[, optimistic := ifelse(Paris_Agreement_Targets ==  "Optimistic_1.5°C" |
-                                                        Paris_Agreement_Targets ==  "Optimistic_well below 2°C", FALSE, TRUE)]
+setDT(WTW_Comparison_Database_adj3)[, optimistic := ifelse(Paris_Agreement_Targets ==  "Unconventional_1.5°C" |
+                                                        Paris_Agreement_Targets ==  "Unconventional_well below 2°C", FALSE, TRUE)]
 
 WTW_Comparison_Database_adj2_plot <- ggplot() +
   geom_line(data = filter(WTW_Comparison_Database_adj3, !optimistic),
@@ -4179,17 +4177,17 @@ WTW_Comparison_Database_adj2_plot <- ggplot() +
       x = carbon_price,
       y = value,
       col = Paris_Agreement_Targets,
-      linetype = "100% Green Fuels in 2035 (80% yearly growth)"))+
+      linetype = "Unconventional Boundary Growth of Green Fuels"))+
     geom_line(data = filter(WTW_Comparison_Database_adj3, optimistic),
     aes(
       x = carbon_price,
       y = value,
       col = Paris_Agreement_Targets,
-      linetype = "100% Green Fuels in 2045 (40% yearly growth)"))+
+      linetype = "Conventional Boundary Growth of Green Fuels"))+
     scale_linetype_manual("Linetypes",
                         values = c(
-                          "100% Green Fuels in 2045 (40% yearly growth)" = "solid",
-                          "100% Green Fuels in 2035 (80% yearly growth)" = "dashed"
+                          "Conventional  Growth of Green Fuels" = "solid",
+                          "Unconventional  Growth of Green Fuels" = "dashed"
                         )) +
   guides(
     fill = guide_legend(keywidth = 1, keyheight = 1),
