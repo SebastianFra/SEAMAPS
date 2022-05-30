@@ -57,7 +57,7 @@ Biomass Availabiltiy
 	unit: [PJ]
 	description: Availability of sustainable biomass potential for biofuels
 	Gap: Here we use averages of sustainable biomass only (Crop Residues, Forestry residues, Black liquor). We could use the MESSAGEix availbility of biomass
-Comepting Demand:
+Competing Demand:
 	unit: [PJ]
 	description: demand for biomass from other industries here: aviation, petro-chemical, biomass for electricity, On-Road-Freight
 	Gap: Here we use averages from different reports for the respective industries and also only cover a few industries. In this case we should use MESSAGEix to have a more holistic approach to this topic.
