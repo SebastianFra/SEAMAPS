@@ -1,10 +1,10 @@
-using JuMP, Gurobi, CSV, DataFrames, DelimitedFiles
+using JuMP, Gurobi, Ipopt, CSV, DataFrames, DelimitedFiles
 
 #Scenarios
 #define Market Based Measure
 MBM = "CO2_tax" #CO2_tax, CO2_tax_flat, Global_cap, Baseline
 #Emission Accounting standard
-Set = "Infra"#WTW,Infra,TTW, GWP20 (Global Warming Potential 20 Years)
+Settings = "Infra"#WTW,Infra,TTW, GWP20 (Global Warming Potential 20 Years)
 #Taxation of Emissions
 Taxed = "WTW"#WTW,TTW
 #Sensitivity Parameters
@@ -19,10 +19,10 @@ green_decay_em = "FALSE"
 #input data file
 Data_file_name = "Input_data_SEAMAPS.xls"
 #define your local folder
-Main_folder = "C:/Users/semfr/Documents/SEAMAPS/data"
+Main_folder = "C:/Users/semfr/Documents/SEAMAPS/SEAMAPS/data"
 #define your scenario data
 Multiple_Runs = "TRUE" #FALSE, TRUE
-if Multiple_Runs == "FALSE"
+if Multiple_Runs == "TRUE"
     Scenarios_file_name = "Scenarios.xls"
     Scenarios_set = "All_scenarios"
 elseif Multiple_Runs != "FALSE"
@@ -34,15 +34,16 @@ include("Import_scenarios.jl");
 Ambition = "Realistic"
 #define the name of your output folder in your local folder
 Bottleneck_tech = ["Electrolyser", "CCS"] ; BT = length(Bottleneck_tech)
-scale ="Unconventional" #Conventional, Unconventional
+scale ="Conventional" #Conventional, Unconventional
+dynamic_learning="TRUE"
 if scale == "Unconventional"
 Growth_rate = [2 2]
 elseif scale == "Conventional"
-Growth_rate = [1.3 1.3]
+Growth_rate = [1.5 1.5]
 end
 Cap_Init = [5 1.8]
 Cap_0 = [0 0]
-All_results_folder = "Results_" * Set * "_" * MBM * "_" * Ambition * "_" * Taxed * "_" * scale
+All_results_folder = "Results_" * Settings * "_" * MBM * "_" * Ambition * "_" * Taxed * "_" * scale
 #define limitations on ramping up production facilities to be enabled or not
 if Ambition == "Realistic"
     Option_ramping_fuels = "TRUE"
@@ -74,6 +75,7 @@ include("SEAMAPS_import.jl")
 #Model
 Shipping_stock = Model(Gurobi.Optimizer)
 
+
 #variables
 @variable(Shipping_stock, x[1:S, 1:Y] >= 0) #number of ships bought per year [# of av ships]
 @variable(Shipping_stock, q[1:S, 1:Y] >= 0) #Total ship stock at year Y [# of av ships]
@@ -91,7 +93,12 @@ end
 @variable(Shipping_stock, Bio_used_MeOH[1:Y] >= 0) #Biomass used to produce e_methanol [PJ]
 @variable(Shipping_stock, Bio_used_PO[1:Y] >= 0) #Biomass used to produce PO [PJ]
 @variable(Shipping_stock, Cap_bt[1:BT,1:Y]) # Production capacities of fuel bottleneck technologies [Any unit is possible MW installed, Mt/y, ...]
-@variable(Shipping_stock, Inv_dec[1:BT,1:Y],Bin) # Investment decision for production capacities of bottleneck technology (driven by costs and demand)
+#@variable(Shipping_stock, Inv_dec_f_1[1:F, 1:S, 1:Y],Bin)# Investment decision for dynamic learning curves
+#@variable(Shipping_stock, Inv_dec_f_2[1:F, 1:S, 1:Y],Bin)# Investment decision for dynamic learning curves
+@variable(Shipping_stock, Inv_dec[1:BT,1:Y],Bin)
+#@variable(Shipping_stock, Inv_dec_f_0[1:F, 1:S, 1:Y],Bin) # Investment decision for production capacities of bottleneck technology (driven by costs and demand)
+@variable(Shipping_stock, fuel_cost_dynamic[f=1:F,y=1:Y]>= 0) #Fuel cost, ship, and year [PJ]
+
 
 if MBM != "ETS"
     @objective(
@@ -102,7 +109,7 @@ if MBM != "ETS"
             y = 1:Y
         ) +
         sum(
-            z[f, s, y] * (fuel_cost[f, y] + fuel_tax[f, y]) for s = 1:S,
+            z[f, s, y] * (fuel_cost_dynamic[f, y] + fuel_tax[f, y]) for s = 1:S,
             f = 1:F, y = 1:Y
         ) +
         sum(
@@ -169,6 +176,34 @@ end
     q[s, y] == EF[s, y] + NB[s, y]
 )
 
+if dynamic_learning="TRUE":
+#------------------------Learning Curves constraint--------------------------
+# Set the initial parameter values and thresholds
+thresholds = [0, 100, 250, 500, 1000, 2000, 3500, 5000, 7000, 10000]
+param_values_exogenous = [1,0.8,0.6,0.5,0.45,0.425,0.4,0.375,0.35,0.3]
+#set solver to solve NonConvex problems
+set_optimizer_attribute(Shipping_stock, "NonConvex", 2)
+#set solver MIPGap 
+set_optimizer_attribute(Shipping_stock,"MIPGap", 0.015)
+# Set the initial cost
+fuel_cost_0 = [10.17 10.91 10.91 8.77 8.09 10.50 950.51 41.31 51.99 61.77 10.66 29.02 45.90 24.00 40.00 400.00]
+#add variable for the learning parameter, which depends on the respective fuel used
+@variable(Shipping_stock, learning_parameter[1:F,1:Y])
+J = length(thresholds)
+# Create binary variables to indicate which threshold has been reached in each year
+@variable(Shipping_stock, b[1:F,1:Y,1:J],Bin)
+# Add constraints to active the respective binary for the threshold reached
+@constraint(Shipping_stock, [f = 1:F,j=1:J,y=1:Y-1],TotFuel[f,y+1]>=thresholds[j]*b[f,y,j])
+# Add constraints to ensure only one threshold is triggered
+@constraint(Shipping_stock, [f = 1:F,y=1:Y], sum(b[f,y,j] for j in 1:J)== 1)
+# Add a constraint to update the parameter value based on the threshold that has been reached in each year
+@constraint(Shipping_stock, [f = 1:F,y=1:Y],learning_parameter[f,y] == sum(b[f,y,j]* param_values_exogenous[j] for j in 1:J))  
+# Add a constraint to calibrate the initial fuel cost to our 2020 estimates
+@constraint(Shipping_stock,[f = 1:F,y=1], fuel_cost_dynamic[f, y] == fuel_cost_0[f])  
+@constraint(Shipping_stock,[f = 1:F,y=2:Y], fuel_cost_dynamic[f, y] == fuel_cost_0[f]-(fuel_cost_0[f]*(1-learning_parameter[f,y])))  
+
+else if dynamic_learning != "TRUE":
+
 #------------------------Demand constraint--------------------------
 #Transport demand must be satisfied
 @constraint(
@@ -220,7 +255,7 @@ if Option_ramping_fuels == "TRUE"
     @constraint(Shipping_stock,[bt=1:BT,y=1:Y-1], Cap_bt[bt,y+1] <= Cap_bt[bt,y]*Growth_rate[bt] + Cap_Init[bt]*Inv_dec[bt,y]) #New capacities limited by growth rate
     @constraint(Shipping_stock,[bt=1:BT],sum(Inv_dec[bt,y] for y=1:Y) <= 1) # Only one initial investment
     #Lock-in effect: once you invest you have to keep the production capacities
-    @constraint(Shipping_stock,[bt=1:BT,y=1:Y-1], Cap_bt[bt,y+1] >= Cap_bt[bt,y])
+    #@constraint(Shipping_stock,[bt=1:BT,y=1:Y-1], Cap_bt[bt,y+1] >= Cap_bt[bt,y])
 
 
 #------------------ From bottleneck technologies to fuels (e.g. H2 to eMeOH)
@@ -243,11 +278,11 @@ end
 
 #emission constraint for year 2050 and onwards
 #TTW Set settings
-if Set == "TTW"
+if Settings == "TTW"
     for f = 1:F, y = 1:Y
         fuel_emissions_WTT[f, y] = fuel_emissions_WTT[f, y] * 0
     end
-elseif Set != "TTW"
+elseif Settings != "TTW"
 end
 if MBM == "Ship_cap"
     if CO2_limit == "WTW_99"
@@ -299,7 +334,7 @@ end
 fuel_fueltype_year = zeros(F, Y)
 for f = 1:F
     for y = 1:Y
-        fuel_fueltype_year[f, y] = sum(JuMP.value.(z[f, s, y]) for s = 1:S)
+        fuel_fueltype_year[f, y] = sum(JuMP.value.(TotFuel[f, y]))
     end
 end
 
@@ -365,6 +400,20 @@ for y = 1:Y
     Total_cost[y] = JuMP.objective_value(Shipping_stock)
 end
 
+binary_data = zeros(F,Y)
+for f=1:F
+    for y = 1:Y
+        binary_data[f,y] = sum(JuMP.value.(b[f,y,j]) for j = 1:J)
+    end
+end
+
+fuel_cost_dynamic_data = zeros(F, Y)
+for f = 1:F
+    for y = 1:Y
+    fuel_cost_dynamic_data[f, y] = JuMP.value.(fuel_cost_dynamic[f, y])
+    end
+end
+
 Total_cost_year = zeros(Y)
 for y = 1:Y
     Total_cost_year[y] = sum(
@@ -381,28 +430,30 @@ for f = 1:F, y = 1:Y
     Total_fuel_tax[f, y] = fuel_tax[f, y]
 end
 #creates dataframes
-Carbon_levy = DataFrame([Year transpose(Carbon_levy_data)])
-ships_bought = DataFrame([Year transpose(JuMP.value.(x))])
-Existing_fleet = DataFrame([Year transpose(JuMP.value.(EF))])
-stock = DataFrame([Year transpose(JuMP.value.(q))])
-decommission_new = DataFrame([Year transpose(JuMP.value.(d))])
-decommission_EF = DataFrame([Year transpose(JuMP.value.(d_EF))])
-fuel_f_y = DataFrame([Year transpose(fuel_fueltype_year)])
-fuel_s_y = DataFrame([Year transpose(fuel_ship_year)])
-Total_fueltax_data = DataFrame([Year transpose(Total_fuel_tax)])
+Carbon_levy = DataFrame([Year transpose(Carbon_levy_data)],:auto)
+fuel_cost_dynamic = DataFrame([Year transpose(fuel_cost_dynamic_data)],:auto)
+binary = DataFrame([Year transpose(binary_data)],:auto)
+ships_bought = DataFrame([Year transpose(JuMP.value.(x))],:auto)
+Existing_fleet = DataFrame([Year transpose(JuMP.value.(EF))],:auto)
+stock = DataFrame([Year transpose(JuMP.value.(q))],:auto)
+decommission_new = DataFrame([Year transpose(JuMP.value.(d))],:auto)
+decommission_EF = DataFrame([Year transpose(JuMP.value.(d_EF))],:auto)
+fuel_f_y = DataFrame([Year transpose(fuel_fueltype_year)],:auto)
+fuel_s_y = DataFrame([Year transpose(fuel_ship_year)],:auto)
+Total_fueltax_data = DataFrame([Year transpose(Total_fuel_tax)],:auto)
 emissions = DataFrame(
     [Year transpose(EmissionsTTW_f_y) transpose(EmissionsWTT_f_y) transpose(
         Emissionstot_f_y,
-    )],
+    )],:auto
 )
 emissionstot =
-    DataFrame([Year EmissionstotWTT EmissionstotTTW Emissionstot])
-Results_CO2_marcost = DataFrame([Year CO2_margcost])
-obj_value = DataFrame([Year Total_cost])
-obj_value_year = DataFrame([Year Total_cost_year])
+    DataFrame([Year EmissionstotWTT EmissionstotTTW Emissionstot],:auto)
+Results_CO2_marcost = DataFrame([Year CO2_margcost],:auto)
+obj_value = DataFrame([Year Total_cost],:auto)
+obj_value_year = DataFrame([Year Total_cost_year],:auto)
 if MBM != "ETS"
 elseif MBM == "ETS"
-    emission_allowances = DataFrame([Year (JuMP.value.(st))])
+    emission_allowances = DataFrame([Year (JuMP.value.(st))],:auto)
 end
 
 
@@ -417,6 +468,7 @@ rename!(Existing_fleet, ["Year"; Ships])
 rename!(stock, ["Year"; Ships])
 rename!(decommission_new, ["Year"; Ships])
 rename!(decommission_EF, ["Year"; Ships])
+rename!(fuel_cost_dynamic, ["Year"; Fuels])
 rename!(fuel_f_y, ["Year"; Fuels])
 rename!(fuel_s_y, ["Year"; Ships])
 rename!(emissionstot, ["Year", "WTT", "TTW", "WTW"])
@@ -467,9 +519,11 @@ Emissionstot = zeros(Y)
 for  y = 1:Y
     Emissionstot[y] = Emissionstot_total
 end
-    Emissionstot_total_adj = DataFrame([Year Emissionstot])
+    Emissionstot_total_adj = DataFrame([Year Emissionstot],:auto)
 CSV.write(joinpath(Results_folder, "Cumulated_Emissions.csv"), Emissionstot_total_adj)
 CSV.write(joinpath(Results_folder, "Results_fuels_f_y_PJ.csv"), fuel_f_y)
+CSV.write(joinpath(Results_folder, "Fuel_cost_dynamic.csv"), fuel_cost_dynamic)
+CSV.write(joinpath(Results_folder, "binary.csv"), binary)
 CSV.write(joinpath(Results_folder, "Results_fuels_s_y_PJ.csv"), fuel_s_y)
 CSV.write(
     joinpath(Results_folder, "Results_CO2magcost.csv"),
