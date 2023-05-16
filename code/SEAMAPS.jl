@@ -176,34 +176,35 @@ end
     q[s, y] == EF[s, y] + NB[s, y]
 )
 
-if dynamic_learning="TRUE":
-#------------------------Learning Curves constraint--------------------------
-# Set the initial parameter values and thresholds
-thresholds = [0, 100, 250, 500, 1000, 2000, 3500, 5000, 7000, 10000]
-param_values_exogenous = [1,0.8,0.6,0.5,0.45,0.425,0.4,0.375,0.35,0.3]
-#set solver to solve NonConvex problems
-set_optimizer_attribute(Shipping_stock, "NonConvex", 2)
-#set solver MIPGap 
-set_optimizer_attribute(Shipping_stock,"MIPGap", 0.015)
-# Set the initial cost
-fuel_cost_0 = [10.17 10.91 10.91 8.77 8.09 10.50 950.51 41.31 51.99 61.77 10.66 29.02 45.90 24.00 40.00 400.00]
-#add variable for the learning parameter, which depends on the respective fuel used
-@variable(Shipping_stock, learning_parameter[1:F,1:Y])
-J = length(thresholds)
-# Create binary variables to indicate which threshold has been reached in each year
-@variable(Shipping_stock, b[1:F,1:Y,1:J],Bin)
-# Add constraints to active the respective binary for the threshold reached
-@constraint(Shipping_stock, [f = 1:F,j=1:J,y=1:Y-1],TotFuel[f,y+1]>=thresholds[j]*b[f,y,j])
-# Add constraints to ensure only one threshold is triggered
-@constraint(Shipping_stock, [f = 1:F,y=1:Y], sum(b[f,y,j] for j in 1:J)== 1)
-# Add a constraint to update the parameter value based on the threshold that has been reached in each year
-@constraint(Shipping_stock, [f = 1:F,y=1:Y],learning_parameter[f,y] == sum(b[f,y,j]* param_values_exogenous[j] for j in 1:J))  
-# Add a constraint to calibrate the initial fuel cost to our 2020 estimates
-@constraint(Shipping_stock,[f = 1:F,y=1], fuel_cost_dynamic[f, y] == fuel_cost_0[f])  
-@constraint(Shipping_stock,[f = 1:F,y=2:Y], fuel_cost_dynamic[f, y] == fuel_cost_0[f]-(fuel_cost_0[f]*(1-learning_parameter[f,y])))  
+if dynamic_learning=="TRUE"
+    #------------------------Learning Curves constraint--------------------------
+    # Set the initial parameter values and thresholds
+    thresholds = [0, 100, 250, 500, 1000, 2000, 3500, 5000, 7000, 10000]
+    param_values_exogenous = [1,0.8,0.6,0.5,0.45,0.425,0.4,0.375,0.35,0.3]
+    #set solver to solve NonConvex problems
+    set_optimizer_attribute(Shipping_stock, "NonConvex", 2)
+    #set solver MIPGap 
+    set_optimizer_attribute(Shipping_stock,"MIPGap", 0.0165)
+    # Set the initial cost
+    fuel_cost_0 = [10.17 10.91 10.91 8.77 8.09 10.50 950.51 41.31 51.99 61.77 10.66 29.02 45.90 24.00 40.00 400.00]
+    #add variable for the learning parameter, which depends on the respective fuel used
+    @variable(Shipping_stock, learning_parameter[1:F,1:Y])
+    J = length(thresholds)
+    # Create binary variables to indicate which threshold has been reached in each year
+    @variable(Shipping_stock, b[1:F,1:Y,1:J],Bin)
+    # Add constraints to active the respective binary for the threshold reached
+    @constraint(Shipping_stock, [f = 1:F,j=1:J,y=1:Y-1],TotFuel[f,y+1]>=thresholds[j]*b[f,y,j])
+    # Add constraints to ensure only one threshold is triggered
+    @constraint(Shipping_stock, [f = 1:F,y=1:Y], sum(b[f,y,j] for j in 1:J)== 1)
+    # Add a constraint to update the parameter value based on the threshold that has been reached in each year
+    @constraint(Shipping_stock, [f = 1:F,y=1:Y],learning_parameter[f,y] == sum(b[f,y,j]* param_values_exogenous[j] for j in 1:J))  
+    # Add a constraint to calibrate the initial fuel cost to our 2020 estimates
+    @constraint(Shipping_stock,[f = 1:F,y=1], fuel_cost_dynamic[f, y] == fuel_cost_0[f])  
+    @constraint(Shipping_stock,[f = 1:F,y=2:Y], fuel_cost_dynamic[f, y] == fuel_cost_0[f]-(fuel_cost_0[f]*(1-learning_parameter[f,y])))  
 
-else if dynamic_learning != "TRUE":
+elseif dynamic_learning != "TRUE"
 
+end
 #------------------------Demand constraint--------------------------
 #Transport demand must be satisfied
 @constraint(
